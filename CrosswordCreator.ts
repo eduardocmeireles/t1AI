@@ -1,24 +1,25 @@
 import { Crossword, CrosswordVariable } from './Crossword';
-import * as fs from 'fs';
+import fs from 'fs';
 
 export class CrosswordCreator {
     crossword: Crossword;
-    domains: Map<CrosswordVariable, Set<string>>;
+    domains: Map<string, Set<string>>;
 
     constructor(crossword: Crossword) {
         this.crossword = crossword;
         this.domains = new Map();
         crossword.variables.forEach(variable => {
-            this.domains.set(variable, new Set([...crossword.words]));
+            this.domains.set(variable.id, new Set([...crossword.words]));
         });
     }
 
-    letterGrid(assignment: Map<CrosswordVariable, string>): (string | null)[][] {
+    letterGrid(assignment: Map<string, string>): (string | null)[][] {
         const letters: (string | null)[][] = Array.from(
             { length: this.crossword.height }, 
             () => Array(this.crossword.width).fill(null)
         );
-        for (const [variable, word] of assignment.entries()) {
+        for (const [varId, word] of assignment.entries()) {
+            const variable = this.crossword.getVariableById(varId)!;
             const direction = variable.direction;
             for (let k = 0; k < word.length; k++) {
                 const i = variable.i + (direction === CrosswordVariable.DOWN ? k : 0);
@@ -29,7 +30,7 @@ export class CrosswordCreator {
         return letters;
     }
 
-    save(assignment: Map<CrosswordVariable, string>, filename: string): void {
+    save(assignment: Map<string, string>, filename: string): void {
         const letters = this.letterGrid(assignment);
         const output: string[] = [];
 
@@ -39,7 +40,7 @@ export class CrosswordCreator {
                 if (this.crossword.structure[i][j]) {
                     row += letters[i][j] || ' ';
                 } else {
-                    row += '.';
+                    row += '.'; // Use a block character for black squares
                 }
             }
             output.push(row);
@@ -49,16 +50,17 @@ export class CrosswordCreator {
         fs.writeFileSync(filename, output.join('\n'), 'utf8');
     }
 
-    solve(): Map<CrosswordVariable, string> | null {
+    solve(): Map<string, string> | null {
         this.enforceNodeConsistency();
-
-        this.ac3(); // Enforce arc consistency
-
-        return this.backtrack(new Map()); // Use backtracking to complete the rest
+        if (!this.ac3()) {
+            return null;
+        }
+        return this.backtrack(new Map());
     }
 
     private enforceNodeConsistency(): void {
-        this.domains.forEach((domain, variable) => {
+        this.domains.forEach((domain, varId) => {
+            const variable = this.crossword.getVariableById(varId)!;
             const toRemove = new Set<string>();
             domain.forEach(word => {
                 if (word.length !== variable.length) {
@@ -70,21 +72,23 @@ export class CrosswordCreator {
     }
 
     private ac3(): boolean {
-        const queue: [CrosswordVariable, CrosswordVariable][] = [];
-        this.domains.forEach((_, var1) => {
-            this.domains.forEach((_, var2) => {
-                if (var1 !== var2) queue.push([var1, var2]);
+        const queue: [string, string][] = [];
+        this.domains.forEach((_, varId1) => {
+            this.domains.forEach((_, varId2) => {
+                if (varId1 !== varId2) queue.push([varId1, varId2]);
             });
         });
 
         while (queue.length > 0) {
-            const [x, y] = queue.shift()!;
+            const [xId, yId] = queue.shift()!;
+            const x = this.crossword.getVariableById(xId)!;
+            const y = this.crossword.getVariableById(yId)!;
             if (this.revise(x, y)) {
-                if (this.domains.get(x)!.size === 0) {
+                if (this.domains.get(xId)!.size === 0) {
                     return false; // Empty domain, no possible solution
                 }
                 this.crossword.neighbors(x).forEach(z => {
-                    if (z !== y) queue.push([z, x]);
+                    if (z.id !== yId) queue.push([z.id, xId]);
                 });
             }
         }
@@ -92,13 +96,15 @@ export class CrosswordCreator {
     }
 
     private revise(x: CrosswordVariable, y: CrosswordVariable): boolean {
+        const xId = x.id;
+        const yId = y.id;
         const toRemove = new Set<string>();
-        const overlaps = this.crossword.overlaps.get(`${x}-${y}`);
+        const overlaps = this.crossword.overlaps.get(`${xId}-${yId}`);
 
         if (overlaps) {
-            for (const valX of this.domains.get(x)!) {
+            for (const valX of this.domains.get(xId)!) {
                 let consistent = false;
-                for (const valY of this.domains.get(y)!) {
+                for (const valY of this.domains.get(yId)!) {
                     if (valX[overlaps[0]] === valY[overlaps[1]]) {
                         consistent = true;
                         break;
@@ -110,55 +116,58 @@ export class CrosswordCreator {
             }
         }
 
-        toRemove.forEach(valX => this.domains.get(x)!.delete(valX));
+        toRemove.forEach(valX => this.domains.get(xId)!.delete(valX));
         return toRemove.size > 0;
     }
 
-    private backtrack(assignment: Map<CrosswordVariable, string>): Map<CrosswordVariable, string> | null {
+    private backtrack(assignment: Map<string, string>): Map<string, string> | null {
         if (this.assignmentComplete(assignment)) {
             return assignment;
         }
 
         const varToAssign = this.selectUnassignedVariable(assignment);
+        const varId = varToAssign.id;
         for (const value of this.orderDomainValues(varToAssign, assignment)) {
-            assignment.set(varToAssign, value);
+            assignment.set(varId, value);
             if (this.consistent(assignment)) {
                 const result = this.backtrack(assignment);
                 if (result !== null) {
                     return result;
                 }
             }
-            assignment.delete(varToAssign);
+            assignment.delete(varId);
         }
         return null;
     }
 
-    private assignmentComplete(assignment: Map<CrosswordVariable, string>): boolean {
+    private assignmentComplete(assignment: Map<string, string>): boolean {
         for (const variable of this.crossword.variables) {
-            if (!assignment.has(variable)) {
+            if (!assignment.has(variable.id)) {
                 return false;
             }
         }
         return true;
     }
 
-    private consistent(assignment: Map<CrosswordVariable, string>): boolean {
+    private consistent(assignment: Map<string, string>): boolean {
         const usedValues = new Set<string>();
 
-        for (const [variable, value] of assignment.entries()) {
+        for (const [varId, value] of assignment.entries()) {
             if (usedValues.has(value)) {
                 return false;
             }
             usedValues.add(value);
+
+            const variable = this.crossword.getVariableById(varId)!;
 
             if (value.length !== variable.length) {
                 return false;
             }
 
             for (const neighbor of this.crossword.neighbors(variable)) {
-                if (assignment.has(neighbor)) {
-                    const neighborValue = assignment.get(neighbor)!;
-                    const overlaps = this.crossword.overlaps.get(`${variable}-${neighbor}`);
+                if (assignment.has(neighbor.id)) {
+                    const neighborValue = assignment.get(neighbor.id)!;
+                    const overlaps = this.crossword.overlaps.get(`${varId}-${neighbor.id}`);
                     if (overlaps && value[overlaps[0]] !== neighborValue[overlaps[1]]) {
                         return false;
                     }
@@ -169,17 +178,18 @@ export class CrosswordCreator {
         return true;
     }
 
-    private orderDomainValues(varToAssign: CrosswordVariable, assignment: Map<CrosswordVariable, string>): string[] {
+    private orderDomainValues(varToAssign: CrosswordVariable, assignment: Map<string, string>): string[] {
+        const varId = varToAssign.id;
         const neighbors = this.crossword.neighbors(varToAssign);
-        const domain = Array.from(this.domains.get(varToAssign)!);
+        const domain = Array.from(this.domains.get(varId)!);
 
         return domain.sort((a, b) => {
             let countA = 0;
             let countB = 0;
 
             for (const neighbor of neighbors) {
-                if (!assignment.has(neighbor)) {
-                    const neighborDomain = this.domains.get(neighbor)!;
+                if (!assignment.has(neighbor.id)) {
+                    const neighborDomain = this.domains.get(neighbor.id)!;
                     neighborDomain.forEach(value => {
                         if (a !== value) countA++;
                         if (b !== value) countB++;
@@ -191,12 +201,13 @@ export class CrosswordCreator {
         });
     }
 
-    private selectUnassignedVariable(assignment: Map<CrosswordVariable, string>): CrosswordVariable {
+    private selectUnassignedVariable(assignment: Map<string, string>): CrosswordVariable {
         return Array.from(this.domains.keys())
-            .filter(variable => !assignment.has(variable))
+            .filter(varId => !assignment.has(varId))
+            .map(varId => this.crossword.getVariableById(varId)!)
             .sort((a, b) => {
-                const domainA = this.domains.get(a)!.size;
-                const domainB = this.domains.get(b)!.size;
+                const domainA = this.domains.get(a.id)!.size;
+                const domainB = this.domains.get(b.id)!.size;
                 if (domainA !== domainB) {
                     return domainA - domainB;
                 }
@@ -204,5 +215,3 @@ export class CrosswordCreator {
             })[0];
     }
 }
-
-module.exports = { CrosswordCreator };

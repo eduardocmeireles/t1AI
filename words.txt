@@ -1,8 +1,0 @@
-tree
-moon
-door
-bark
-otar
-rock
-otar
-acc

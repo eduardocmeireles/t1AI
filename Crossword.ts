@@ -1,4 +1,4 @@
-import * as fs from 'fs';
+import fs from 'fs';
 
 export class CrosswordVariable {
     static ACROSS = "across";
@@ -9,6 +9,7 @@ export class CrosswordVariable {
     direction: string;
     length: number;
     cells: [number, number][];
+    id: string;
 
     constructor(i: number, j: number, direction: string, length: number) {
         this.i = i;
@@ -23,15 +24,15 @@ export class CrosswordVariable {
                 this.j + (this.direction === CrosswordVariable.ACROSS ? k : 0)
             ]);
         }
+        this.id = `${i}-${j}-${direction}-${length}`;
     }
 
     equals(other: CrosswordVariable): boolean {
-        return this.i === other.i && this.j === other.j && 
-               this.direction === other.direction && this.length === other.length;
+        return this.id === other.id;
     }
 
     toString(): string {
-        return `(${this.i}, ${this.j}) ${this.direction} : ${this.length}`;
+        return this.id;
     }
 }
 
@@ -41,6 +42,7 @@ export class Crossword {
     structure: boolean[][];
     words: Set<string>;
     variables: Set<CrosswordVariable>;
+    variableMap: Map<string, CrosswordVariable>;
     overlaps: Map<string, [number, number] | null>;
 
     constructor(structureFile: string, wordsFile: string) {
@@ -48,6 +50,7 @@ export class Crossword {
         this.words = new Set();
         this.variables = new Set();
         this.overlaps = new Map();
+        this.variableMap = new Map();
         
         this.height = 0;
         this.width = 0;
@@ -73,7 +76,13 @@ export class Crossword {
     }
 
     private loadWords(file: string): void {
-        const data = fs.readFileSync(file, 'utf8').toUpperCase().split('\n');
+        const data = fs.readFileSync(file, 'utf8')
+            .toUpperCase()
+            .split(/\r?\n/)
+            .map(word => word.trim())
+            .filter(word => word);
+            console.log(data);
+            
         this.words = new Set(data);
     }
 
@@ -86,7 +95,9 @@ export class Crossword {
                         length++;
                     }
                     if (length > 1) {
-                        this.variables.add(new CrosswordVariable(i, j, CrosswordVariable.DOWN, length));
+                        const variable = new CrosswordVariable(i, j, CrosswordVariable.DOWN, length);
+                        this.variables.add(variable);
+                        this.variableMap.set(variable.id, variable);
                     }
                 }
 
@@ -96,7 +107,9 @@ export class Crossword {
                         length++;
                     }
                     if (length > 1) {
-                        this.variables.add(new CrosswordVariable(i, j, CrosswordVariable.ACROSS, length));
+                        const variable = new CrosswordVariable(i, j, CrosswordVariable.ACROSS, length);
+                        this.variables.add(variable);
+                        this.variableMap.set(variable.id, variable);
                     }
                 }
             }
@@ -108,21 +121,19 @@ export class Crossword {
             for (const v2 of this.variables) {
                 if (v1 !== v2) {
                     const overlap = this.getOverlap(v1, v2);
-                    if (overlap) {
-                        this.overlaps.set(`${v1}-${v2}`, overlap);
-                    } else {
-                        this.overlaps.set(`${v1}-${v2}`, null);
-                    }
+                    this.overlaps.set(`${v1.id}-${v2.id}`, overlap);
                 }
             }
         }
     }
 
     private getOverlap(v1: CrosswordVariable, v2: CrosswordVariable): [number, number] | null {
-        for (let [i1, j1] of v1.cells) {
-            for (let [i2, j2] of v2.cells) {
+        for (let idx1 = 0; idx1 < v1.cells.length; idx1++) {
+            const [i1, j1] = v1.cells[idx1];
+            for (let idx2 = 0; idx2 < v2.cells.length; idx2++) {
+                const [i2, j2] = v2.cells[idx2];
                 if (i1 === i2 && j1 === j2) {
-                    return [v1.cells.indexOf([i1, j1]), v2.cells.indexOf([i2, j2])];
+                    return [idx1, idx2];
                 }
             }
         }
@@ -130,8 +141,10 @@ export class Crossword {
     }
 
     neighbors(variable: CrosswordVariable): CrosswordVariable[] {
-        return Array.from(this.variables).filter(v => v !== variable && this.overlaps.get(`${variable}-${v}`) !== null);
+        return Array.from(this.variables).filter(v => v !== variable && this.overlaps.get(`${variable.id}-${v.id}`) !== null);
+    }
+
+    getVariableById(id: string): CrosswordVariable | undefined {
+        return this.variableMap.get(id);
     }
 }
-
-module.exports = { Crossword, CrosswordVariable };

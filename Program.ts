@@ -1,6 +1,6 @@
-const { Crossword } = require('./Crossword');
-const { CrosswordCreator } = require('./CrosswordCreator');
-const fs = require('fs');
+import { Crossword } from './Crossword';
+import { CrosswordCreator } from './CrosswordCreator';
+import fs from 'fs';
 
 function main(): void {
     const args = process.argv.slice(2);
