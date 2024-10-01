@@ -64,8 +64,8 @@ export class Crossword {
     private loadStructure(file: string): void {
         const data = fs.readFileSync(file, 'utf8').split('\n');
         this.height = data.length;
-        this.width = Math.max(...data.map(line => line.length));
-
+        this.width = Math.max(...data.map(line => line.length)) -1;
+        
         for (let i = 0; i < this.height; i++) {
             const row: boolean[] = [];
             for (let j = 0; j < this.width; j++) {
@@ -81,7 +81,6 @@ export class Crossword {
             .split(/\r?\n/)
             .map(word => word.trim())
             .filter(word => word);
-            console.log(data);
             
         this.words = new Set(data);
     }

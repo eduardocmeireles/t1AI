@@ -4,7 +4,8 @@
   "scripts": {
     "ex1": "ts-node Program.ts ./data/grid-11x11-20W-84L-37B.txt ./data/words.txt output.txt",
     "ex2": "ts-node Program.ts ./data/grid-15x15-34W-169L-56B.txt ./data/words.txt output.txt",
-    "ex3": "ts-node Program.ts ./data/grid-25x25-88W-400L-225B.txt ./data/words.txt output.txt"
+    "ex3": "ts-node Program.ts ./data/grid-25x25-88W-400L-225B.txt ./data/words.txt output.txt",
+    "teste": "ts-node Program.ts ./data/structure.txt ./data/words.txt output.txt"
   },
   "devDependencies": {
     "ts-node": "^10.0.0",
