@@ -1,6 +1,5 @@
 import { Crossword } from './Crossword';
 import { CrosswordCreator } from './CrosswordCreator';
-import fs from 'fs';
 
 function main(): void {
     const args = process.argv.slice(2);
@@ -13,13 +12,11 @@ function main(): void {
     const words = args[1];
     const output = args[2] ? args[2] : 'output.txt';
 
-    // Generate the crossword puzzle
     const crossword = new Crossword(structure, words);
     const creator = new CrosswordCreator(crossword);
     
     const assignment = creator.solve();
 
-    // Display the result and save to file
     if (assignment === null) {
         console.log("No solution.");
     } else {

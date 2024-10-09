@@ -1,5 +1,5 @@
-import { Crossword, CrosswordVariable } from './Crossword';
 import fs from 'fs';
+import { Crossword, CrosswordVariable } from './Crossword';
 
 export class CrosswordCreator {
     crossword: Crossword;
@@ -42,11 +42,9 @@ export class CrosswordCreator {
             output.push(row);
         }
 
-        // Save the result to the output file
         fs.writeFileSync(filename, output.join('\n'), 'utf8');
     }
 
-    // Monta arquivo de saída com solução
     letterGrid(assignment: Map<string, string>): (string | null)[][] {
         const letters: (string | null)[][] = Array.from(
             { length: this.crossword.height },
@@ -67,7 +65,6 @@ export class CrosswordCreator {
         return letters;
     }
 
-    // Log passo a passo
     saveSteps(filename: string): void {
         fs.writeFileSync(filename, this.steps.join('\n'), 'utf8');
     }
@@ -78,9 +75,8 @@ export class CrosswordCreator {
         }
         const result = this.backtrack(new Map());
 
-        // After solving, save the steps to a file
         if (result !== null) {
-            this.saveSteps('solution_steps.txt'); // Change the filename as needed
+            this.saveSteps('solution_steps.txt'); 
         }
         return result;
     }
@@ -195,14 +191,12 @@ export class CrosswordCreator {
             return false;
         }
 
-        // Check if the value is unique among assigned values
         for (const [varId, assignedValue] of assignment.entries()) {
             if (varId !== variable.id && assignedValue === value) {
                 return false;
             }
         }
 
-        // Check if the value conflicts with neighboring assignments
         for (const neighbor of this.crossword.neighbors(variable)) {
             const neighborValue = assignment.get(neighbor.id);
             if (neighborValue) {
@@ -229,7 +223,6 @@ export class CrosswordCreator {
             neighbor => !assignment.has(neighbor.id)
         );
 
-        // Calculate the number of choices eliminated for neighbors by each value
         const valueConstraints: Map<string, number> = new Map();
 
         for (const value of domainValues) {
@@ -242,7 +235,6 @@ export class CrosswordCreator {
                     const [i, j] = overlap;
                     const neighborDomain = this.domains.get(neighborId)!;
 
-                    // Count the number of values in neighbor's domain that are consistent with 'value'
                     let consistentValues = 0;
                     for (const neighborValue of neighborDomain) {
                         if (value[i] === neighborValue[j]) {
@@ -250,7 +242,6 @@ export class CrosswordCreator {
                         }
                     }
 
-                    // Increase constraint count by the number of inconsistent values
                     constraintCount += neighborDomain.size - consistentValues;
                 }
             }
@@ -258,17 +249,14 @@ export class CrosswordCreator {
             valueConstraints.set(value, constraintCount);
         }
 
-        // Sort domain values by least constraining value (ascending order of constraint count)
         return domainValues.sort((a, b) => valueConstraints.get(a)! - valueConstraints.get(b)!);
     }
 
     private selectUnassignedVariable(assignment: Map<string, string>): CrosswordVariable {
-        // Collect unassigned variables
         const unassignedVariables = Array.from(this.crossword.variables).filter(
             v => !assignment.has(v.id)
         );
 
-        // Apply MRV heuristic (minimum remaining values)
         unassignedVariables.sort((a, b) => {
             const domainSizeA = this.domains.get(a.id)!.size;
             const domainSizeB = this.domains.get(b.id)!.size;
@@ -277,7 +265,6 @@ export class CrosswordCreator {
                 return domainSizeA - domainSizeB;
             }
 
-            // Tie-breaker: degree heuristic (maximum degree)
             const degreeA = this.crossword.neighbors(a).filter(neighbor => !assignment.has(neighbor.id)).length;
             const degreeB = this.crossword.neighbors(b).filter(neighbor => !assignment.has(neighbor.id)).length;
 
