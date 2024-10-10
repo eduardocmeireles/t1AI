@@ -11,7 +11,6 @@ export class CrosswordCreator {
         this.domains = new Map();
         this.steps = [];
 
-        
         for (const variable of this.crossword.variables) {
             const wordsOfCorrectLength = new Set<string>();
 
@@ -22,13 +21,11 @@ export class CrosswordCreator {
             }
             this.domains.set(variable.id, wordsOfCorrectLength);
         }
-
-        
     }
 
     save(assignment: Map<string, string>, filename: string): void {
         const letters = this.letterGrid(assignment);
-        const output: string[] = [];  
+        const output: string[] = [];
 
         for (let i = 0; i < this.crossword.height; i++) {
             let row = '';
@@ -51,9 +48,6 @@ export class CrosswordCreator {
             () => Array(this.crossword.width).fill(null)
         );
 
-        console.log(letters);
-        
-
         for (const [varId, word] of assignment.entries()) {
             const variable = this.crossword.getVariableById(varId)!;
             for (let k = 0; k < word.length; k++) {
@@ -61,7 +55,7 @@ export class CrosswordCreator {
                 letters[i][j] = word[k];
             }
         }
-        
+
         return letters;
     }
 
@@ -70,21 +64,25 @@ export class CrosswordCreator {
     }
 
     solve(): Map<string, string> | null {
+        console.time('Tempo para resolver'); 
+
         if (!this.ac3()) {
             return null;
         }
+
         const result = this.backtrack(new Map());
 
         if (result !== null) {
-            this.saveSteps('solution_steps.txt'); 
+            this.saveSteps('solution_steps.txt');
         }
+
+        console.timeEnd('Tempo para resolver'); 
         return result;
     }
 
-
     private ac3(): boolean {
         const queue: [string, string][] = [];
-        
+
         for (const variable of this.crossword.variables) {
             const varId1 = variable.id;
             for (const neighbor of this.crossword.neighbors(variable)) {
