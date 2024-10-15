@@ -4,7 +4,6 @@ import { CrosswordCreator } from './CrosswordCreator';
 function main(): void {
     const args = process.argv.slice(2);
     if (args.length < 2 || args.length > 3) {
-        console.error("Usage: ts-node Program.ts structure.txt words.txt [output.txt]");
         process.exit(1);
     }
 
@@ -18,9 +17,9 @@ function main(): void {
     const assignment = creator.solve();
 
     if (assignment === null) {
-        console.log("No solution.");
+        console.log("Não tem solução.");
     } else {
-        console.log(`Solution found. Saving to ${output}`);
+        console.log(`Sucesso! Solução salva no ${output}`);
         creator.save(assignment, output);
     }
 }
