@@ -1,10 +1,11 @@
 {
-  "name": "your-project-name",
+  "name": "t1-ia-crossword",
   "version": "1.0.0",
   "scripts": {
-    "ex1": "ts-node Program.ts ./data/grid-11x11-20W-84L-37B.txt ./data/words.txt output.txt",
-    "ex2": "ts-node Program.ts ./data/grid-15x15-34W-169L-56B.txt ./data/words.txt output.txt",
-    "ex3": "ts-node Program.ts ./data/grid-25x25-88W-400L-225B.txt ./data/words.txt output.txt",
+    "ex0": "ts-node Program.ts ./data/structure.txt ./data/word.txt output.txt",
+    "grid11x11": "ts-node Program.ts ./data/grid-11x11-20W-84L-37B.txt ./data/words.txt output.txt",
+    "grid15x15": "ts-node Program.ts ./data/grid-15x15-34W-169L-56B.txt ./data/words.txt output.txt",
+    "grid25x25": "ts-node Program.ts ./data/grid-25x25-88W-400L-225B.txt ./data/words.txt output.txt",
     "teste": "ts-node Program.ts ./data/structure.txt ./data/words.txt output.txt"
   },
   "devDependencies": {
