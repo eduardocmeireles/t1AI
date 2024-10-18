@@ -40,14 +40,14 @@ export class Crossword {
   height: number;
   width: number;
   structure: boolean[][];
-  words: Set<string>;
+  words: Map<number, Set<string>>;
   variables: Set<CrosswordVariable>;
   variableMap: Map<string, CrosswordVariable>;
   overlaps: Map<string, [number, number] | null>;
 
   constructor(structureFile: string, wordsFile: string) {
     this.structure = [];
-    this.words = new Set();
+    this.words = new Map();
     this.variables = new Set();
     this.overlaps = new Map();
     this.variableMap = new Map();
@@ -76,13 +76,24 @@ export class Crossword {
   }
 
   private loadWords(file: string): void {
-    const data = fs
-      .readFileSync(file, "utf8")
+    const mapWords = new Map<number, Set<string>>();
+
+    fs.readFileSync(file, "utf8")
       .toUpperCase()
       .split(/\r?\n/)
-      .map((word) => word.trim());
+      .map((word) => {
+        const toUpdate = mapWords.get(word.length);
 
-    this.words = new Set(data);
+        if (toUpdate) {
+          if (!toUpdate.has(word)) {
+            toUpdate.add(word);
+          }
+        } else {
+          mapWords.set(word.length, new Set(word));
+        }
+      });
+
+    this.words = mapWords;
   }
 
   private findVariables(): void {
@@ -125,6 +136,7 @@ export class Crossword {
     }
   }
 
+  //GERADO COM IA
   private computeOverlaps(): void {
     for (const v1 of this.variables) {
       for (const v2 of this.variables) {
@@ -151,6 +163,7 @@ export class Crossword {
     }
     return null;
   }
+  // FIM GERADO COM IA
 
   neighbors(variable: CrosswordVariable): CrosswordVariable[] {
     return Array.from(this.variables).filter(

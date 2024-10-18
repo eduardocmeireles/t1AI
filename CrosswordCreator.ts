@@ -15,14 +15,11 @@ export class CrosswordCreator {
     this.variableDegrees = new Map();
 
     for (const variable of this.crossword.variables) {
-      const wordsOfCorrectLength = new Set<string>();
+      const domainWithLength = this.crossword.words.get(variable.length);
 
-      for (const word of this.crossword.words) {
-        if (word.length === variable.length) {
-          wordsOfCorrectLength.add(word);
-        }
+      if (domainWithLength) {
+        this.domains.set(variable.id, domainWithLength);
       }
-      this.domains.set(variable.id, wordsOfCorrectLength);
 
       const degree = this.crossword.neighbors(variable).length;
       this.variableDegrees.set(variable.id, degree);
